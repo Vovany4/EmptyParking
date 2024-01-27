@@ -43,7 +43,9 @@ namespace Repositories
                 var parkSpot = new Spot
                 {
                     Id = reader.GetInt32("id"),
-                    IsEmpty = reader.GetBoolean("isempty")
+                    IsEmpty = reader.GetBoolean("isempty"),
+                    Latitude = reader.GetDouble("latitude"),
+                    Longitude = reader.GetDouble("longitude"),
                 };
 
                 list.Add(parkSpot);

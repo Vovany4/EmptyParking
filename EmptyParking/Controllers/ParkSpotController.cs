@@ -15,27 +15,13 @@ namespace EmptyParking.Controllers
 
         public async Task<IActionResult> Index()
         {
-           /* var parkSpotList = new List<ParkSpotModel>();
-            NpgsqlConnection conn = new NpgsqlConnection("Server=localhost; Port=5432; Database=master; User Id=postgres; Password=1111;");
-            conn.Open();
+            var parkSpots = await _mainService.GetParkSpotsAsync();
 
-            NpgsqlCommand cmd = new NpgsqlCommand();
-            cmd.Connection = conn;
-            cmd.CommandType = CommandType.Text;
-            cmd.CommandText = "SELECT * FROM ParkSpots";
+            return View(MapToViewModel(parkSpots));
+        }
 
-            NpgsqlDataReader reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                var parkSpot = new ParkSpotModel
-                {
-                    Id = reader.GetInt32("id"),
-                    IsEmpty = reader.GetBoolean("isempty")
-                };
-
-                parkSpotList.Add(parkSpot);
-            }*/
-
+        public async Task<IActionResult> Map()
+        {
             var parkSpots = await _mainService.GetParkSpotsAsync();
 
             return View(MapToViewModel(parkSpots));
@@ -50,7 +36,9 @@ namespace EmptyParking.Controllers
                 var parkSpot = new ParkSpotViewModel
                 {
                     Id = spot.Id,
-                    IsEmpty = spot.IsEmpty
+                    IsEmpty = spot.IsEmpty,
+                    Longitude = spot.Longitude,
+                    Latitude = spot.Latitude
                 };
 
                 parkSpotsViewModel.Add(parkSpot);

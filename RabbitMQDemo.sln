@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RabbitReceiver2", "RabbitRe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Models", "Models\Models.csproj", "{D835781F-99AD-4C68-9407-078EA7C7ED0F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmptyParking", "EmptyParking\EmptyParking.csproj", "{15F67286-FF7E-4E69-85BE-74963E9C12A6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmptyParking", "EmptyParking\EmptyParking.csproj", "{15F67286-FF7E-4E69-85BE-74963E9C12A6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DataBase", "DataBase", "{8991D951-8A03-41B2-B48B-47F3A9BBE319}"
 EndProject
@@ -19,13 +19,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{B0
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Repositories", "Repositories", "{9C71A31A-A380-4228-9BE4-8B204E97FEE1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services", "Services\Services.csproj", "{8243016C-2FB3-4FF7-889C-36B29B6AF06B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Services", "Services\Services.csproj", "{8243016C-2FB3-4FF7-889C-36B29B6AF06B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services.Interfaces", "Serivices.Interfaces\Services.Interfaces.csproj", "{E0FE2B31-02D2-4422-B307-F8072FC9EE55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Services.Interfaces", "Serivices.Interfaces\Services.Interfaces.csproj", "{E0FE2B31-02D2-4422-B307-F8072FC9EE55}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repositories", "Repositories\Repositories.csproj", "{7F718253-0F64-47DB-AE95-B0A47976BA0D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Repositories", "Repositories\Repositories.csproj", "{7F718253-0F64-47DB-AE95-B0A47976BA0D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repositories.Interfaces", "Repositories.Interfaces\Repositories.Interfaces.csproj", "{869BA504-ADA1-47D4-9DEC-D6BB14AD5671}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Repositories.Interfaces", "Repositories.Interfaces\Repositories.Interfaces.csproj", "{869BA504-ADA1-47D4-9DEC-D6BB14AD5671}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
