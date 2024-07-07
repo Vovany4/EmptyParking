@@ -1,21 +1,22 @@
 services: 
     db:
       container_name: postgres_container
-      image: postgres:latest
+      image: postgis/postgis
       restart: always
       volumes:
-        - ./data/db:/var/lib/postgresql/data
+        - ./data/db:/var/lib/postgtesql/data
       environment:
-         POSTGRES_USER: postgres
+         POSTGRES_USER: postgis
          POSTGRES_PASSWORD: 1111
          POSTGRES_DB: master
       ports: 
-        - 5432:5432
+        - 5433:5432
       networks:
          app_net:
-            ipv4_address: 192.168.0.2
+            ipv4_address: 192.168.0.22
 
     pgadmin:
+      user: root
       container_name: pgadmin4_container
       image: dpage/pgadmin4
       restart: always
@@ -30,10 +31,16 @@ services:
          app_net:
             ipv4_address: 192.168.0.3
 
-    queue: 
-      image: rabbitmq:latest 
+    queue:
+      container_name: rabbitMq_container
+      image: rabbitmq:3-management-alpine
+      restart: unless-stopped
+      volumes:
+        - ./data/rabbitmq/data/:/var/lib/rabbitmq/
+        - ./data/rabbitmq/log/:/var/log/rabbitmq
       ports: 
        - 5672:5672
+       - 15672:15672
       networks:
          app_net:
             ipv4_address: 192.168.0.4

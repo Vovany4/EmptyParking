@@ -11,13 +11,23 @@
     <link rel="stylesheet" href="~/css/Map.css" />
 </head>
 <body>
+    <div id="servermsg">
+        <ul id="msgList">
+        </ul>
+    </div>
 
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="~/js/Map.js"></script>
+
+    <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+    <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+   @*  <script src="~/js/ClientNotification.js"></script> *@
+
     <script type="text/javascript">
         setUpMap(@Html.Raw(JsonSerializer.Serialize(Model)));
+        connectClientNotification();
     </script>
 </body>
 </html>

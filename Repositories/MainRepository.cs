@@ -18,6 +18,13 @@ namespace Repositories
 
             return ToParkSpotList(cmd.ExecuteReader());
         }
+        public async Task<Spot> GetParkSpotAsync(int id)
+        {
+            var commandText = $"SELECT * FROM ParkSpots WHERE id = {id}";
+            NpgsqlCommand cmd = new NpgsqlCommand(commandText, _connection);
+
+            return ToParkSpot(cmd.ExecuteReader());
+        }
 
         public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot)
         {
@@ -53,5 +60,24 @@ namespace Repositories
 
             return list;
         }
+
+        private Spot? ToParkSpot(NpgsqlDataReader reader)
+        {
+            if (reader.Read())
+            {
+                var parkSpot = new Spot
+                {
+                    Id = reader.GetInt32("id"),
+                    IsEmpty = reader.GetBoolean("isempty"),
+                    Latitude = reader.GetDouble("latitude"),
+                    Longitude = reader.GetDouble("longitude"),
+                };
+
+                return parkSpot;
+            }
+
+            return null;
+        }
+
     }
 }

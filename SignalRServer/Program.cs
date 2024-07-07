@@ -1,18 +1,31 @@
-﻿using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using SignalRServer;
 
-namespace SignalRServer
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddSignalR();
+
+builder.Services.AddCors(options =>
 {
-    class Program
-    {
-        private static void Main(string[] args)
-        {
-            CreateWebHostBuilder(args).Build().Run();
-        }
+    options.AddPolicy("AllowAllHeaders",
+            builder =>
+            {
+                builder.WithOrigins("https://localhost:7230")
+                       .AllowAnyHeader()
+                       .AllowAnyMethod()
+                       .AllowCredentials();
+            });
+});
 
-        private static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-            .UseStartup<Startup>();
-    }
-}
+var app = builder.Build();
+
+app.UseRouting();
+
+
+app.UseCors("AllowAllHeaders");
+
+app.MapHub<ChatHub>("/chatHub");
+
+app.Run();

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿/*using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -6,10 +6,10 @@ namespace SignalRServer
 {
     public class Startup
     {
-        //public IConfiguration Configuration { get; }
-        public Startup(/*IConfiguration configuration*/)
+        public IConfiguration Configuration { get; }
+        public Startup(*//*IConfiguration configuration*//*)
         {
-            //Configuration = configuration;
+            Configuration = configuration;
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -28,4 +28,4 @@ namespace SignalRServer
         }
 
     }
-}
+}*/

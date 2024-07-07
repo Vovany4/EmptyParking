@@ -20,6 +20,14 @@ namespace Services
 			}
 		}
 
+        public async Task<Spot> GetParkSpotAsync(int id)
+        {
+            using (Repositories.CreateConnection())
+            {
+                return await Repositories.GetParkSpotAsync(id);
+            }
+        }
+
         public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot)
         {
             using (Repositories.CreateConnection())

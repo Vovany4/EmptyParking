@@ -18,22 +18,49 @@ function setUpMap(data) {
 
 
     data.forEach((item) => {
-        if (item.Longitude && item.Latitude) {
-            var popupContent =
-                '<p>Some Information</p></br>' +
-                '<p>test</p></br>' +
-                '<button onclick="clearMarker(' + item.Id + ')">Clear Marker</button>';
-
-            let marker = new L.Marker([item.Longitude, item.Latitude]);
-            marker._id = item.Id;
-            marker.bindPopup(popupContent, {
-                closeButton: false
-            });
-            map.addLayer(marker);
-            markers.push(marker);
-        }
+        addMarker(item.Id, item.Longitude, item.Latitude);
     });
 
+};
+
+function connectClientNotification() {
+    var connection = new signalR.HubConnectionBuilder()
+        .withUrl("http://localhost:5083/notificationHub")
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+    async function start() {
+        try {
+
+            await connection.start().then(() => {
+
+                //connection.invoke("SendMessage", 999, false);
+                connection.on("ReceiveMessage", function (spotId, isEmpty, latitude, longitude) {
+                    debugger;
+                    if (!isEmpty) {
+                        clearMarker(spotId);
+                    } else {
+                        addMarker(spotId, longitude, latitude);
+                    }
+
+                    var li = document.createElement("li");
+                    li.textContent = `SpotId: ${spotId}, IsEmpty: ${isEmpty}, Latitude: ${latitude}, Longitude: ${longitude}`;
+                    document.getElementById("msgList").appendChild(li);
+                });
+            }); /*/notificationHub*/
+
+        } catch (err) {
+            console.log(err);
+            setTimeout(start, 5000);
+        }
+    };
+
+    connection.onclose(async () => {
+        await start();
+    });
+
+    // Start the connection.
+    start();
 };
 
 function clearMarker(id) {
@@ -47,5 +74,22 @@ function clearMarker(id) {
 
     if (index > -1) { 
         markers.splice(index, 1);
+    }
+}
+
+function addMarker(itemId, longitude, latitude) {
+    if (longitude && latitude) {
+        var popupContent =
+            '<p>Some Information</p></br>' +
+            '<p>test</p></br>' +
+            '<button onclick="clearMarker(' + itemId + ')">Clear Marker</button>';
+
+        let marker = new L.Marker([longitude, latitude]);
+        marker._id = itemId;
+        marker.bindPopup(popupContent, {
+            closeButton: false
+        });
+        map.addLayer(marker);
+        markers.push(marker);
     }
 }

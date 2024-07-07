@@ -24,7 +24,7 @@ channel.QueueBind(queueName, exchangeName, routingKey, null);
 
 var spot = new Spot
 { 
-    Id = 1,
+    Id = 3,
     IsEmpty = true
 };
 

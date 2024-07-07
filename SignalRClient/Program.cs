@@ -1,21 +1,15 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 
-internal class Program
+var connection = new HubConnectionBuilder()
+    .WithUrl("http://localhost:5007/chatHub")
+    .Build();
+
+connection.StartAsync().Wait();
+connection.InvokeCoreAsync("SendMessage", args: new[] { "Vova", "Hello" });
+
+connection.On("ReceiveMessage", (string userName, string message) =>
 {
-    private static void Main(string[] args)
-    {
-        var connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5000/chatHub")
-            .Build();
+    Console.WriteLine(userName + ":" + message);
+});
 
-        connection.StartAsync().Wait();
-        connection.InvokeCoreAsync("SendMessage", args: new[] { "Vova", "Hello" });
-
-        connection.On("ReceiveMessage", (string userName, string message) =>
-        {
-            Console.WriteLine(userName + ":" + message);
-        });
-
-        Console.ReadLine();
-    }
-}
+Console.ReadLine();
