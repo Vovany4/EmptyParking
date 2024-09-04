@@ -7,6 +7,12 @@ import { eventMessages, expectedResult } from './TestData.js';
 export let options = {
     vus: 1,   // Number of virtual users
     duration: '15s', // Duration of the test
+    cloud: {
+        // Project: Default project
+        projectID: 3712534,
+        // Test runs with the same name groups test runs together.
+        name: 'Test run demo'
+    }
 };
 
 let eventMessageCounter = 0;
