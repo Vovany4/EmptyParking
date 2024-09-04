@@ -35,7 +35,7 @@ function connectClientNotification() {
             await connection.start().then(() => {
 
                 //connection.invoke("SendMessage", 999, false);
-                connection.on("ReceiveMessage", function (spotId, isEmpty, latitude, longitude) {
+                connection.on("ReceiveMessage", function (spotId, isEmpty, latitude, longitude, timeStamp) {
                     debugger;
                     if (!isEmpty) {
                         clearMarker(spotId);
@@ -44,7 +44,7 @@ function connectClientNotification() {
                     }
 
                     var li = document.createElement("li");
-                    li.textContent = `SpotId: ${spotId}, IsEmpty: ${isEmpty}, Latitude: ${latitude}, Longitude: ${longitude}`;
+                    li.textContent = `SpotId: ${spotId}, IsEmpty: ${isEmpty}, Latitude: ${latitude}, Longitude: ${longitude}, TimeStamp: ${timeStamp}`;
                     document.getElementById("msgList").appendChild(li);
                 });
             }); /*/notificationHub*/

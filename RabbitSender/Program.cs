@@ -11,13 +11,13 @@ IConnection cnn = factory.CreateConnection();
 
 IModel channel = cnn.CreateModel();
 
-string exchangeName = "DemoExchange";
-string routingKey = "demo-routing-key";
+//string exchangeName = "DemoExchange";
+//string routingKey = "demo-routing-key";
 string queueName = "DemoQueue";
 
-channel.ExchangeDeclare(exchangeName, ExchangeType.Direct);
+//channel.ExchangeDeclare(exchangeName, ExchangeType.Direct);
 channel.QueueDeclare(queueName, false, false, false);
-channel.QueueBind(queueName, exchangeName, routingKey, null);
+//channel.QueueBind(queueName, exchangeName, routingKey, null);
 
 /*for (int i = 0; i < 60; i++)
 {*/
@@ -25,14 +25,16 @@ channel.QueueBind(queueName, exchangeName, routingKey, null);
 var spot = new Spot
 { 
     Id = 3,
-    IsEmpty = true
+    IsEmpty = true,
+    TimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()
 };
 
 var jsonSpot = JsonConvert.SerializeObject(spot);
 
 Console.WriteLine($"Message send: {jsonSpot}");
 byte[] messageBodyBytes = Encoding.UTF8.GetBytes(jsonSpot);
-channel.BasicPublish(exchangeName, routingKey, null, messageBodyBytes);
+//channel.BasicPublish(exchangeName, routingKey, null, messageBodyBytes);
+channel.BasicPublish(string.Empty, queueName, null, messageBodyBytes);
 Thread.Sleep(1000);
 
 //}

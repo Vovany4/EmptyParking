@@ -28,13 +28,13 @@ namespace Server
 
             IModel channel = cnn.CreateModel();
 
-            string exchangeName = "DemoExchange";
-            string routingKey = "demo-routing-key";
+            //string exchangeName = "DemoExchange";
+            //string routingKey = "demo-routing-key";
             string queueName = "DemoQueue";
 
-            channel.ExchangeDeclare(exchangeName, ExchangeType.Direct);
+            //channel.ExchangeDeclare(exchangeName, ExchangeType.Direct);
             channel.QueueDeclare(queueName, false, false, false);
-            channel.QueueBind(queueName, exchangeName, routingKey, null);
+            //channel.QueueBind(queueName, exchangeName, routingKey, null);
             channel.BasicQos(0, 1, false);
 
 
@@ -62,7 +62,14 @@ namespace Server
                     Console.WriteLine($"{nameof(spot.Longitude)}: {spot.Longitude}");
                     Console.WriteLine($"{nameof(spot.Latitude)}: {spot.Latitude}");
 
-                    await hubContext.Clients.All.SendAsync("ReceiveMessage", spot.Id, spot.IsEmpty, databaseSpot.Latitude, databaseSpot.Longitude);
+                    await hubContext.Clients.All.SendAsync(
+                        "ReceiveMessage",
+                        spot.Id, 
+                        spot.IsEmpty, 
+                        databaseSpot.Latitude, 
+                        databaseSpot.Longitude,
+                        spot.TimeStamp);
+                    //await hubContext.Clients.All.SendAsync("SendMessage", spot.Id, spot.IsEmpty, databaseSpot.Latitude, databaseSpot.Longitude);
                     Console.WriteLine($"SignalR result : good");
                 }
                 else
