@@ -28,50 +28,36 @@ namespace Server
             using (var channel = cnn.CreateModel())
             {
                 string queueName = "DemoQueue";
+                int timeIntervalToWaitSec = 10;
+
                 while (true)
                 {
-                    int messagesToConsume = 10;
+                    uint messagesToConsume;
                     int consumedMessages = 0;
                     string consumerTag = string.Empty;
 
-                    // Poll the queue until there are 10 messages
-                    while (true)
-                    {
-                        var queueDeclareOk = channel.QueueDeclare(queueName, false, false, false);
-                        channel.BasicQos(0, 1, false);
-                        var messageCount = queueDeclareOk.MessageCount;
+                    Thread.Sleep(timeIntervalToWaitSec * 1000);
 
-                        Console.WriteLine($"Current message count in the queue '{queueName}': {messageCount}");
-
-                        if (messageCount >= messagesToConsume)
-                        {
-                            Console.WriteLine($"Message count is {messagesToConsume} or more, starting to consume messages.");
-                            break;
-                        }
-
-                        // Wait for a short period before checking again
-                        Thread.Sleep(1000); // Adjust the polling interval as needed
-                    }
-
+                    var queueDeclareOk = channel.QueueDeclare(queueName, false, false, false);
+                    channel.BasicQos(0, 1, false);
+                    messagesToConsume = queueDeclareOk.MessageCount;
 
                     var consumer = new EventingBasicConsumer(channel);
                     consumer.Received += async (sender, args) =>
                     {
-                        await ConsumerLogicAsync(args);
-
-                        channel.BasicAck(args.DeliveryTag, false);
+                        await ConsumerLogicAsync(channel, args);
                         consumedMessages++;
 
                         if (consumedMessages >= messagesToConsume)
                         {
-                            Console.WriteLine("Processed 10 messages, stopping consumption.");
-                            channel.BasicCancel(consumerTag); // Stop consuming after 10 messages
+                            Console.WriteLine($"Processed {messagesToConsume} messages, stopping consumption.");
+                            channel.BasicCancel(consumerTag); // Stop consuming after processed messages
                         }
                     };
 
                     consumerTag = channel.BasicConsume(queueName, false, consumer);
 
-                    // Wait until 10 messages have been consumed before continuing the loop
+                    // Wait until messages have been consumed before continuing the loop
                     while (consumedMessages < messagesToConsume)
                     {
                         Thread.Sleep(100); // Small delay to avoid busy waiting
@@ -80,7 +66,7 @@ namespace Server
             }
         }
 
-        private async Task ConsumerLogicAsync(BasicDeliverEventArgs args)
+        private async Task ConsumerLogicAsync(IModel channel, BasicDeliverEventArgs args)
         {
             var body = args.Body.ToArray();
 
@@ -116,6 +102,8 @@ namespace Server
             {
                 Console.WriteLine($"Spot is null");
             }
+
+            channel.BasicAck(args.DeliveryTag, false);
         }
     }
 }

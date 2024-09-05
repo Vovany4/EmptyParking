@@ -32,7 +32,7 @@ export default function () {
 
             socket.setInterval(function timeout() {
                 amqpPublish();
-            }, 5000); // Publish message every 5 sec
+            }, 3000); // Publish message every 3 sec
         });
 
 
