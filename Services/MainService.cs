@@ -1,4 +1,6 @@
-﻿using Models;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using Models;
+using Newtonsoft.Json;
 using Repositories.Interfaces;
 using Services.Interfaces;
 
@@ -6,33 +8,59 @@ namespace Services
 {
     public class MainService : IMainService
 	{
-		private IMainRepository Repositories;
-		public MainService(IMainRepository repositories)
-		{
-			Repositories = repositories;
-		}
+		private readonly IMainRepository repositories;
+        private readonly IDistributedCache cache;
+        public MainService(IMainRepository repositories, IDistributedCache cache)
+        {
+            this.repositories = repositories;
+            this.cache = cache;
+        }
 
-		public async Task<List<Spot>> GetParkSpotsAsync()
+        public async Task<List<Spot>> GetParkSpotsAsync()
 		{
-			using (Repositories.CreateConnection())
+			using (repositories.CreateConnection())
 			{
-				return await Repositories.GetParkSpotsAsync();
+				return await repositories.GetParkSpotsAsync();
 			}
 		}
 
         public async Task<Spot> GetParkSpotAsync(int id)
         {
-            using (Repositories.CreateConnection())
+            var key = $"spot-{id}";
+            var cachedValue = await cache.GetStringAsync(key);
+
+            if (!string.IsNullOrEmpty(cachedValue))
             {
-                return await Repositories.GetParkSpotAsync(id);
+                return JsonConvert.DeserializeObject<Spot>(cachedValue);
             }
+
+            var valueFromDb = default(Spot);
+            using (repositories.CreateConnection())
+            {
+                valueFromDb = await repositories.GetParkSpotAsync(id);
+            }
+
+            if (valueFromDb == null)
+            {
+                return valueFromDb;
+            }
+
+            await cache.SetStringAsync(
+                key, 
+                JsonConvert.SerializeObject(valueFromDb), 
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) // Set cache expiration
+                });
+
+            return valueFromDb;
         }
 
         public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot)
         {
-            using (Repositories.CreateConnection())
+            using (repositories.CreateConnection())
             {
-                return await Repositories.UpdateIsEmptyParkSpotAsync(spot);
+                return await repositories.UpdateIsEmptyParkSpotAsync(spot);
             }
         }
     }

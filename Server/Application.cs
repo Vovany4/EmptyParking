@@ -15,7 +15,7 @@ namespace Server
         public Application(IMainService mainService, IHubContext<NotificationHub> hubContext)
         {
             this.mainService = mainService;
-            this.hubContext = hubContext; 
+            this.hubContext = hubContext;
         }
 
         public void Run()
@@ -28,41 +28,19 @@ namespace Server
             using (var channel = cnn.CreateModel())
             {
                 string queueName = "DemoQueue";
-                int timeIntervalToWaitSec = 10;
 
-                while (true)
+                channel.QueueDeclare(queueName, false, false, false);
+                channel.BasicQos(0, 1, false);
+
+                var consumer = new EventingBasicConsumer(channel);
+                consumer.Received += async (sender, args) =>
                 {
-                    uint messagesToConsume;
-                    int consumedMessages = 0;
-                    string consumerTag = string.Empty;
+                    await ConsumerLogicAsync(channel, args);
+                };
 
-                    Thread.Sleep(timeIntervalToWaitSec * 1000);
+                channel.BasicConsume(queueName, false, consumer);
 
-                    var queueDeclareOk = channel.QueueDeclare(queueName, false, false, false);
-                    channel.BasicQos(0, 1, false);
-                    messagesToConsume = queueDeclareOk.MessageCount;
-
-                    var consumer = new EventingBasicConsumer(channel);
-                    consumer.Received += async (sender, args) =>
-                    {
-                        await ConsumerLogicAsync(channel, args);
-                        consumedMessages++;
-
-                        if (consumedMessages >= messagesToConsume)
-                        {
-                            Console.WriteLine($"Processed {messagesToConsume} messages, stopping consumption.");
-                            channel.BasicCancel(consumerTag); // Stop consuming after processed messages
-                        }
-                    };
-
-                    consumerTag = channel.BasicConsume(queueName, false, consumer);
-
-                    // Wait until messages have been consumed before continuing the loop
-                    while (consumedMessages < messagesToConsume)
-                    {
-                        Thread.Sleep(100); // Small delay to avoid busy waiting
-                    }
-                }
+                Console.ReadLine();
             }
         }
 
@@ -83,10 +61,10 @@ namespace Server
                 var result = await mainService.UpdateIsEmptyParkSpotAsync(spot);
                 Console.WriteLine($"Update result : {result}");
 
-                var databaseSpot = await mainService.GetParkSpotAsync(spot.Id);
+                var databaseSpot = await mainService.GetParkSpotAsync(spot.Id); 
                 Console.WriteLine($"Database Spot:");
-                Console.WriteLine($"{nameof(spot.Longitude)}: {spot.Longitude}");
-                Console.WriteLine($"{nameof(spot.Latitude)}: {spot.Latitude}");
+                Console.WriteLine($"{nameof(databaseSpot.Longitude)}: {databaseSpot.Longitude}");
+                Console.WriteLine($"{nameof(databaseSpot.Latitude)}: {databaseSpot.Latitude}");
 
                 await hubContext.Clients.All.SendAsync(
                     "ReceiveMessage",

@@ -45,6 +45,13 @@ services:
          app_net:
             ipv4_address: 192.168.0.4
 
+    redis:
+      container_name: redis_container
+      image: redis:latest
+      restart: always
+      ports:
+       - 6379:6379
+
 networks:
     app_net:
         ipam:

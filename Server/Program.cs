@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Repositories;
 using Repositories.Interfaces;
 using Server;
@@ -11,6 +13,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddTransient<IApplication, Application>();
 builder.Services.AddTransient<IMainRepository, MainRepository>();
 builder.Services.AddTransient<IMainService, MainService>();
+builder.Services.AddSingleton<IDistributedCache, RedisCache>();
 
 builder.Services.AddSignalR();
 builder.Services.AddCors(options => {
@@ -23,6 +26,10 @@ builder.Services.AddCors(options => {
                    .AllowCredentials();
         });
 });
+
+builder.Services.AddStackExchangeRedisCache(options =>
+    options.Configuration = builder.Configuration.GetConnectionString("Redis"));
+
 
 var app = builder.Build();
 
