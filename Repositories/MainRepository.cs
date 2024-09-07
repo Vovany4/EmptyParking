@@ -16,14 +16,14 @@ namespace Repositories
             var commandText = "SELECT * FROM ParkSpots";
             NpgsqlCommand cmd = new NpgsqlCommand(commandText, _connection);
 
-            return ToParkSpotList(cmd.ExecuteReader());
+            return ToParkSpotList(await cmd.ExecuteReaderAsync());
         }
         public async Task<Spot> GetParkSpotAsync(int id)
         {
             var commandText = $"SELECT * FROM ParkSpots WHERE id = {id}";
             NpgsqlCommand cmd = new NpgsqlCommand(commandText, _connection);
 
-            return ToParkSpot(cmd.ExecuteReader());
+            return ToParkSpot(await cmd.ExecuteReaderAsync());
         }
 
         public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot)
