@@ -28,65 +28,21 @@ namespace Server
             using var channel = cnn.CreateModel();
 
             string queueName = "DemoQueue";
-            int timeIntervalToWaitSec = 30;
-            uint maxMessagesToConsume = 100;
+            
+            channel.QueueDeclare(queueName, false, false, false);
+            channel.BasicQos(0, 1, false);
 
-            while (true)
+            var consumer = new EventingBasicConsumer(channel);
+            consumer.Received += async (sender, args) =>
             {
-                uint messagesToConsume = 0;
-                var waitTillMessagesConsuming = true;
-                var consumerTag = string.Empty;
-                var startTime = DateTime.Now;
-                var aggregatedMessages = 0;
+                await ConsumerLogicAsync(channel, args);
+            };
 
-                while ((DateTime.Now - startTime).TotalSeconds < timeIntervalToWaitSec)
-                {
-                    var queueDeclareOk = channel.QueueDeclare(queueName, false, false, false);
-                    messagesToConsume = queueDeclareOk.MessageCount;
+            var consumerTag = channel.BasicConsume(queueName, false, consumer);
 
-                    Console.WriteLine($"Current message count in the queue '{queueName}': {messagesToConsume}");
+            Console.ReadLine();
 
-                    if (messagesToConsume >= maxMessagesToConsume)
-                    {
-                        Console.WriteLine($"Message count is {messagesToConsume} or more, starting to consume messages.");
-                        break;
-                    }
-
-                    // Wait for a short period before checking again
-                    Thread.Sleep(1000);
-                }
-
-                if (messagesToConsume > 0)
-                {
-                    channel.BasicQos(0, 1, false);
-
-                    var consumer = new EventingBasicConsumer(channel);
-                    consumer.Received += async (sender, args) =>
-                    {
-                        aggregatedMessages++;
-
-                        if (aggregatedMessages >= messagesToConsume)
-                        {
-                            channel.BasicCancel(consumerTag); // Stop consuming new messages until process collected
-                            waitTillMessagesConsuming = false;
-                        }
-
-                        await ConsumerLogicAsync(channel, args);
-                    };
-
-                    consumerTag = channel.BasicConsume(queueName, false, consumer);
-
-                    WaitTillMessagesConsuming(ref waitTillMessagesConsuming);
-                }
-            }
-        }
-
-        private static void WaitTillMessagesConsuming(ref bool waitTillMessagesConsuming)
-        {
-            while (waitTillMessagesConsuming)
-            {
-                Thread.Sleep(100); // Small delay to avoid busy waiting
-            }
+            channel.BasicCancel(consumerTag);
         }
 
         private async Task ConsumerLogicAsync(IModel channel, BasicDeliverEventArgs args)
