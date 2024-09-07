@@ -11,41 +11,41 @@ namespace Repositories
         {
         }
 
-        public async Task<List<Spot>> GetParkSpotsAsync()
+        public async Task<List<Spot>> GetParkSpotsAsync(NpgsqlConnection conn)
         {
             var commandText = "SELECT * FROM ParkSpots";
-            NpgsqlCommand cmd = new NpgsqlCommand(commandText, _connection);
 
-            return ToParkSpotList(await cmd.ExecuteReaderAsync());
+            await using NpgsqlCommand cmd = new NpgsqlCommand(commandText, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            return await ToParkSpotListAsync(reader);
         }
-        public async Task<Spot> GetParkSpotAsync(int id)
+        public async Task<Spot?> GetParkSpotAsync(int id, NpgsqlConnection conn)
         {
             var commandText = $"SELECT * FROM ParkSpots WHERE id = {id}";
-            NpgsqlCommand cmd = new NpgsqlCommand(commandText, _connection);
 
-            return ToParkSpot(await cmd.ExecuteReaderAsync());
+            await using NpgsqlCommand cmd = new NpgsqlCommand(commandText, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            return await ToParkSpotAsync(reader);
         }
 
-        public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot)
+        public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot, NpgsqlConnection conn)
         {
             var commandText = $@"UPDATE ParkSpots
                 SET IsEmpty = @IsEmpty
                 WHERE id = @id";
 
-            await using (var cmd = new NpgsqlCommand(commandText, _connection))
-            {
-                cmd.Parameters.AddWithValue("id", spot.Id);
-                cmd.Parameters.AddWithValue("IsEmpty", spot.IsEmpty);
+            await using var cmd = new NpgsqlCommand(commandText, conn);
+            cmd.Parameters.AddWithValue("id", spot.Id);
+            cmd.Parameters.AddWithValue("IsEmpty", spot.IsEmpty);
 
-                return await cmd.ExecuteNonQueryAsync() > 0;
-            }
+            return await cmd.ExecuteNonQueryAsync() > 0;
         }
 
-        private List<Spot> ToParkSpotList(NpgsqlDataReader reader)
+        private async Task<List<Spot>> ToParkSpotListAsync(NpgsqlDataReader reader)
         {
             var list = new List<Spot>();
 
-            while (reader.Read())
+            while (await reader.ReadAsync())
             {
                 var parkSpot = new Spot
                 {
@@ -58,25 +58,29 @@ namespace Repositories
                 list.Add(parkSpot);
             }
 
+            reader.Close();
+
             return list;
         }
 
-        private Spot? ToParkSpot(NpgsqlDataReader reader)
+        private async Task<Spot?> ToParkSpotAsync(NpgsqlDataReader reader)
         {
-            if (reader.Read())
+            Spot? parkSpot = null;
+
+            if (await reader.ReadAsync())
             {
-                var parkSpot = new Spot
+                parkSpot = new Spot
                 {
                     Id = reader.GetInt32("id"),
                     IsEmpty = reader.GetBoolean("isempty"),
                     Latitude = reader.GetDouble("latitude"),
                     Longitude = reader.GetDouble("longitude"),
                 };
-
-                return parkSpot;
             }
 
-            return null;
+            reader.Close();
+
+            return parkSpot;
         }
 
     }

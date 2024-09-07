@@ -18,26 +18,26 @@ namespace Services
 
         public async Task<List<Spot>> GetParkSpotsAsync()
 		{
-			using (repositories.CreateConnection())
+			using (var conn = repositories.CreateConnection())
 			{
-				return await repositories.GetParkSpotsAsync();
+				return await repositories.GetParkSpotsAsync(conn);
 			}
 		}
 
-        public async Task<Spot> GetParkSpotAsync(int id)
+        public async Task<Spot?> GetParkSpotAsync(int id)
         {
             var key = $"spot-{id}";
             var cachedValue = await cache.GetStringAsync(key);
 
             if (!string.IsNullOrEmpty(cachedValue))
             {
-                return JsonConvert.DeserializeObject<Spot>(cachedValue);
+                return JsonConvert.DeserializeObject<Spot?>(cachedValue);
             }
 
             var valueFromDb = default(Spot);
-            using (repositories.CreateConnection())
+            using (var conn = repositories.CreateConnection())
             {
-                valueFromDb = await repositories.GetParkSpotAsync(id);
+                valueFromDb = await repositories.GetParkSpotAsync(id, conn);
             }
 
             if (valueFromDb == null)
@@ -58,9 +58,9 @@ namespace Services
 
         public async Task<bool> UpdateIsEmptyParkSpotAsync(Spot spot)
         {
-            using (repositories.CreateConnection())
+            using (var conn = repositories.CreateConnection())
             {
-                return await repositories.UpdateIsEmptyParkSpotAsync(spot);
+                return await repositories.UpdateIsEmptyParkSpotAsync(spot, conn);
             }
         }
     }

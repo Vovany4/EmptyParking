@@ -4,8 +4,6 @@ namespace Repositories
 {
     public class BaseRepository
     {
-        internal NpgsqlConnection _connection;
-
         private const string host = "localhost";
         private const string port = "5433";
         private const string database = "master";
@@ -21,7 +19,7 @@ namespace Repositories
 
         public NpgsqlConnection CreateConnection()
         {
-            _connection = new NpgsqlConnection(CONNECTION_STRING);
+            var _connection = new NpgsqlConnection(CONNECTION_STRING);
             _connection.Open();
 
             return _connection;
