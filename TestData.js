@@ -1,15 +1,15 @@
 export const eventMessages = [
-    { "Id": 3, "IsEmpty": false },
-    { "Id": 4, "IsEmpty": false },
-    { "Id": 5, "IsEmpty": false },
-    { "Id": 6, "IsEmpty": false },
-    { "Id": 7, "IsEmpty": false },
+    { "Id": 3, "IsEmpty": true },
+    { "Id": 4, "IsEmpty": true },
+    { "Id": 5, "IsEmpty": true },
+    { "Id": 6, "IsEmpty": true },
+    { "Id": 7, "IsEmpty": true },
 ];
 
 export const expectedResult = {
-     3: false,
-     4: false,
-     5: false,
-     6: false,
-     7: false,
+     3: true,
+     4: true,
+     5: true,
+     6: true,
+     7: true,
 };

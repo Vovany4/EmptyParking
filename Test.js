@@ -16,7 +16,8 @@ export let options = {
 };
 
 let eventMessageCounter = 0;
-let finalResult = {};
+let receivedMessages = {};
+let sendedMessages = {};
 const queueName = 'DemoQueue';
 
 export default function () {
@@ -67,7 +68,7 @@ export default function () {
                             "MillisSendReceiveDiff": millisSendReceiveDiff
                         };
 
-                        finalResult[spotId] = receivedValues;
+                        receivedMessages[spotId] = receivedValues;
                     };
             }
 
@@ -79,7 +80,7 @@ export default function () {
 
         socket.on('close', function () {
             console.log('Disconnected from SignalR');
-            console.log(finalResult);
+            console.log(receivedMessages);
         });
 
         socket.on('error', function (e) {
@@ -96,15 +97,12 @@ export default function () {
     });
 
     check(res, { 'status is 101 (switching protocols)': (r) => r && r.status === 101 });
-    check(finalResult, {
-        'Expected result comparison Spot[2]': (r) => r[2] && r[2].IsEmpty == expectedResult[2],
-        'Expected result comparison Spot[3]': (r) => r[3] && r[3].IsEmpty == expectedResult[3],
-        'Expected result comparison Spot[4]': (r) => r[4] && r[4].IsEmpty == expectedResult[4],
-        'Expected result comparison Spot[5]': (r) => r[5] && r[5].IsEmpty == expectedResult[5],
-        'Expected result comparison Spot[5]': (r) => r[6] && r[6].IsEmpty == expectedResult[6],
-        'Expected result comparison Spot[6]': (r) => r[7] && r[7].IsEmpty == expectedResult[7],
 
+    let dynamicChecks = {};
+    Object.entries(sendedMessages).forEach(([key, val]) => {
+        dynamicChecks[`Expected result comparison Spot[${key}]`] = (r) => r[key] && r[key].IsEmpty == val;
     });
+    check(receivedMessages, dynamicChecks);
 }
 
 function amqpConnection() {
@@ -143,5 +141,11 @@ function getAMQPEventMessage() {
     let sendMsg = eventMessages[eventMessageCounter - 1];
     sendMsg.TimeStamp = Date.now();
 
+    writeSendingMessage(sendMsg);
+
     return JSON.stringify(sendMsg);
+}
+
+function writeSendingMessage(msg) {
+    sendedMessages[msg.Id] = msg.IsEmpty;
 }
