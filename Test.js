@@ -2,7 +2,10 @@ import ws from 'k6/ws';
 import { check } from 'k6';
 import Amqp from 'k6/x/amqp';
 import Queue from 'k6/x/amqp/queue';
-import { eventMessages, expectedResult } from './TestData.js';
+import { Gauge } from 'k6/metrics';
+import { eventMessages } from './TestData.js';
+
+const myGauge = new Gauge('millisSendReceiveDiff', true);
 
 export let options = {
     vus: 1,   // Number of virtual users
@@ -69,6 +72,7 @@ export default function () {
                         };
 
                         receivedMessages[spotId] = receivedValues;
+                        myGauge.add(millisSendReceiveDiff);
                     };
             }
 
