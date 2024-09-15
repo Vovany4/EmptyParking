@@ -35,7 +35,7 @@ function connectClientNotification() {
             await connection.start().then(() => {
 
                 //connection.invoke("SendMessage", 999, false);
-                connection.on("ReceiveMessage", function (spotId, isEmpty, latitude, longitude, timeStamp) {
+                /*connection.on("ReceiveMessage", function (spotId, isEmpty, latitude, longitude, timeStamp) {
                     debugger;
                     if (!isEmpty) {
                         clearMarker(spotId);
@@ -46,7 +46,24 @@ function connectClientNotification() {
                     var li = document.createElement("li");
                     li.textContent = `SpotId: ${spotId}, IsEmpty: ${isEmpty}, Latitude: ${latitude}, Longitude: ${longitude}, TimeStamp: ${timeStamp}`;
                     document.getElementById("msgList").appendChild(li);
+                });*/
+
+                connection.on("BatchReceiveMessage", function (spots) {
+                    for (var key in spots) {
+                        let spot = spots[key];
+
+                        if (!spot.isEmpty) {
+                            clearMarker(spot.id);
+                        } else {
+                            addMarker(spot.id, spot.longitude, spot.latitude);
+                        }
+
+                        var li = document.createElement("li");
+                        li.textContent = `Id: ${spot.id}, IsEmpty: ${spot.isEmpty}, Latitude: ${spot.latitude}, Longitude: ${spot.longitude}, TimeStamp: ${spot.timeStamp}`;
+                        document.getElementById("msgList").appendChild(li);
+                    }
                 });
+
             }); /*/notificationHub*/
 
         } catch (err) {

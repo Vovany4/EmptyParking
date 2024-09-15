@@ -24,6 +24,14 @@ namespace Services
             }
         }
 
+        public async Task<List<Spot>> GetParkSpotsAsync(List<int> ids)
+        {
+            using (var conn = repositories.CreateConnection())
+            {
+                return await repositories.GetParkSpotsAsync(ids, conn);
+            }
+        }
+
         public async Task<Spot?> GetParkSpotAsync(int id)
         {
             var key = $"spot-{id}";
@@ -61,6 +69,14 @@ namespace Services
             using (var conn = repositories.CreateConnection())
             {
                 return await repositories.UpdateIsEmptyParkSpotAsync(spot, conn);
+            }
+        }
+
+        public async Task<bool> BatchUpdateIsEmptyParkSpotAsync(List<Spot> spots)
+        {
+            using (var conn = repositories.CreateConnection())
+            {
+                return await repositories.BatchUpdateIsEmptyParkSpotAsync(spots, conn);
             }
         }
     }

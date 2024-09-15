@@ -81,10 +81,8 @@ namespace Server
 
                         if (aggregatedMessages >= messagesToConsume)
                         {
-                            foreach (var spotElem in spotAggregation)
-                            {
-                                await ConsumerLogicAsync(spotElem.Value);
-                            }
+                            await ConsumerLogicAsync(spotAggregation.Values.ToList());
+
                             channel.BasicAck(args.DeliveryTag, true); // Acknowledge aggregated messages
                             spotAggregation.Clear();
                             waitTillMessagesConsuming = false;
@@ -106,36 +104,21 @@ namespace Server
             }
         }
 
-        private async Task ConsumerLogicAsync(Spot spot)
+        private async Task ConsumerLogicAsync(List<Spot> spots)
         {
-            if (spot is not null)
-            {
-                Console.WriteLine($"Message Received:");
-                Console.WriteLine($"{nameof(spot.Id)}: {spot.Id}");
-                Console.WriteLine($"{nameof(spot.IsEmpty)} : {spot.IsEmpty}");
+            Console.WriteLine($"Message Received:");
 
-                var result = await mainService.UpdateIsEmptyParkSpotAsync(spot);
-                Console.WriteLine($"Update result : {result}");
+            var result = await mainService.BatchUpdateIsEmptyParkSpotAsync(spots);
+            Console.WriteLine($"Update result : {result}");
 
-                var databaseSpot = await mainService.GetParkSpotAsync(spot.Id) ?? throw new Exception("databaseSpot is null");
-                Console.WriteLine($"Database Spot:");
-                Console.WriteLine($"{nameof(databaseSpot.Longitude)}: {databaseSpot.Longitude}");
-                Console.WriteLine($"{nameof(databaseSpot.Latitude)}: {databaseSpot.Latitude}");
+            var databaseSpot = await mainService.GetParkSpotsAsync(spots.Select(spot => spot.Id).ToList());
+            Console.WriteLine($"Database Spot:");
 
-                await hubContext.Clients.All.SendAsync(
-                    "ReceiveMessage",
-                    spot.Id,
-                    spot.IsEmpty,
-                    databaseSpot.Latitude,
-                    databaseSpot.Longitude,
-                    spot.TimeStamp);
+            databaseSpot.ForEach(dbSpot => dbSpot.TimeStamp = spots.FirstOrDefault(spot => spot.Id == dbSpot.Id)?.TimeStamp);
 
-                Console.WriteLine($"SignalR result : good");
-            }
-            else
-            {
-                Console.WriteLine($"Spot is null");
-            }
+            await hubContext.Clients.All.SendAsync("BatchReceiveMessage", databaseSpot);
+
+            Console.WriteLine($"SignalR result : good");
         }
     }
 }
