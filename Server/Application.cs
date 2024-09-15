@@ -28,7 +28,7 @@ namespace Server
             using var channel = cnn.CreateModel();
 
             string queueName = "DemoQueue";
-            var spotAggregation = new Dictionary<int, Spot>();
+            var spotList = new List<Spot>();
             int timeIntervalToWaitSec = 30;
             uint maxMessagesToConsume = 100;
 
@@ -75,16 +75,16 @@ namespace Server
 
                         if (aggregatedMessages < messagesToConsume)
                         {
-                            spotAggregation[spot.Id] = spot;
+                            spotList.Add(spot);
                             aggregatedMessages++;
                         }
 
                         if (aggregatedMessages >= messagesToConsume)
                         {
-                            await ConsumerLogicAsync(spotAggregation.Values.ToList());
+                            await ConsumerLogicAsync(spotList);
 
                             channel.BasicAck(args.DeliveryTag, true); // Acknowledge aggregated messages
-                            spotAggregation.Clear();
+                            spotList.Clear();
                             waitTillMessagesConsuming = false;
                         }
                     };
@@ -108,8 +108,11 @@ namespace Server
         {
             Console.WriteLine($"Message Received:");
 
-            var result = await mainService.BatchUpdateIsEmptyParkSpotAsync(spots);
-            Console.WriteLine($"Update result : {result}");
+            foreach (var spot in spots)
+            {
+                var result = await mainService.UpdateIsEmptyParkSpotAsync(spot);
+                Console.WriteLine($"Update result : {result}");
+            }
 
             var databaseSpot = await mainService.GetParkSpotsAsync(spots.Select(spot => spot.Id).ToList());
             Console.WriteLine($"Database Spot:");
