@@ -6,10 +6,11 @@ import { Gauge } from 'k6/metrics';
 import { eventMessages } from './TestData.js';
 
 const myGauge = new Gauge('millisSendReceiveDiff', true);
+const testDuration = 300000;
 
 export let options = {
     vus: 1,   // Number of virtual users
-    duration: '15s', // Duration of the test
+    duration: `${testDuration}ms`, // Duration of the test
     cloud: {
         // Project: Default project
         projectID: 3712534,
@@ -34,9 +35,15 @@ export default function () {
             console.log('Connected to SignalR');
             sendSignalRInitialHandshake(socket);
 
+            var allowPublishMessages = true;
             socket.setInterval(function timeout() {
-                amqpPublish();
-            }, 3000); // Publish message every 3 sec
+                if (allowPublishMessages) {
+                    amqpPublish();
+                }
+            }, 500); // Publish message every 0.5 sec
+            socket.setTimeout(function () {
+                allowPublishMessages = false;
+            }, testDuration - 31000); // Stop publish messages before close connection
         });
 
 
@@ -53,33 +60,26 @@ export default function () {
                     let msgWithoutSignalRProtocolEnding = msg.substring(0, msg.length - 1);
                     let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
 
-                    if (parsedMessage.type === 1 && parsedMessage.target === "ReceiveMessage") {
+                    if (parsedMessage.type === 1 && parsedMessage.target === "BatchReceiveMessage") {
 
-                        let spotId = parsedMessage.arguments[0];
-                        let isEmpty = parsedMessage.arguments[1];
-                        let latitude = parsedMessage.arguments[2];
-                        let longitude = parsedMessage.arguments[3];
-                        let timeStamp = parsedMessage.arguments[4];
+                        let dateNow = Date.now();
 
-                        console.log('params ' + parsedMessage.arguments);
+                        for (var key in parsedMessage.arguments[0]) {
+                            let receivedMessage = parsedMessage.arguments[0][key];
 
+                            const millisSendReceiveDiff = dateNow - receivedMessage.timeStamp;
 
-                        const millisSendReceiveDiff = Date.now() - timeStamp;
+                            let receivedValues = {
+                                "IsEmpty": receivedMessage.isEmpty,
+                                "MillisSendReceiveDiff": millisSendReceiveDiff
+                            };
 
-                        let receivedValues = {
-                            "IsEmpty": isEmpty,
-                            "MillisSendReceiveDiff": millisSendReceiveDiff
-                        };
-
-                        receivedMessages[spotId] = receivedValues;
-                        myGauge.add(millisSendReceiveDiff);
+                            receivedMessages[receivedMessage.id] = receivedValues;
+                            myGauge.add(millisSendReceiveDiff);
+                        }
                     };
             }
 
-            // You can add more checks here to validate the messages received
-            /*check(msg, {
-                'message contains expected text': (m) => m.indexOf('expected_text') !== -1,
-            });*/
         });
 
         socket.on('close', function () {
@@ -95,12 +95,12 @@ export default function () {
         socket.setTimeout(function () {
             console.log('Closing WebSocket connection');
             socket.close();
-        }, 15000); // Close after 15 seconds
+        }, testDuration); // Close after test durations
 
 
     });
 
-    check(res, { 'status is 101 (switching protocols)': (r) => r && r.status === 101 });
+    check(res, { 'Connected successfully': (r) => r && r.status === 101 });
 
     let dynamicChecks = {};
     Object.entries(sendedMessages).forEach(([key, val]) => {
