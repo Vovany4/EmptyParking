@@ -29,8 +29,9 @@ namespace Server
 
             string queueName = "DemoQueue";
             var spotList = new List<Spot>();
-            int timeIntervalToWaitSec = 30;
-            uint maxMessagesToConsume = 100;
+
+            int timeIntervalToWaitSec = 10;
+            uint maxMessagesToConsume = 20;
 
             while (true)
             {
@@ -38,7 +39,7 @@ namespace Server
                 var waitTillMessagesConsuming = true;
                 var consumerTag = string.Empty;
                 var startTime = DateTime.Now;
-                var aggregatedMessages = 0;
+                var messagesAtBatch = 0;
 
                 while ((DateTime.Now - startTime).TotalSeconds < timeIntervalToWaitSec)
                 {
@@ -64,7 +65,7 @@ namespace Server
                     var consumer = new EventingBasicConsumer(channel);
                     consumer.Received += async (sender, args) =>
                     {
-                        if (aggregatedMessages + 1 >= messagesToConsume)
+                        if (messagesAtBatch + 1 >= messagesToConsume)
                         {
                             channel.BasicCancel(consumerTag); // Stop consuming new messages until process collected
                         }
@@ -73,13 +74,13 @@ namespace Server
                         string message = Encoding.UTF8.GetString(body);
                         var spot = JsonConvert.DeserializeObject<Spot>(message) ?? throw new Exception("spot is null");
 
-                        if (aggregatedMessages < messagesToConsume)
+                        if (messagesAtBatch < messagesToConsume)
                         {
                             spotList.Add(spot);
-                            aggregatedMessages++;
+                            messagesAtBatch++;
                         }
 
-                        if (aggregatedMessages >= messagesToConsume)
+                        if (messagesAtBatch >= messagesToConsume)
                         {
                             await ConsumerLogicAsync(spotList);
 
@@ -114,12 +115,11 @@ namespace Server
                 Console.WriteLine($"Update result : {result}");
             }
 
-            var databaseSpot = await mainService.GetParkSpotsAsync(spots.Select(spot => spot.Id).ToList());
-            Console.WriteLine($"Database Spot:");
+            var databaseSpots = await mainService.GetParkSpotsAsync(spots.Select(spot => spot.Id).ToList());
 
-            databaseSpot.ForEach(dbSpot => dbSpot.TimeStamp = spots.FirstOrDefault(spot => spot.Id == dbSpot.Id)?.TimeStamp);
+            databaseSpots.ForEach(dbSpot => dbSpot.TimeStamp = spots.FirstOrDefault(spot => spot.Id == dbSpot.Id)?.TimeStamp);
 
-            await hubContext.Clients.All.SendAsync("BatchReceiveMessage", databaseSpot);
+            await hubContext.Clients.All.SendAsync("BatchReceiveMessage", databaseSpots);
 
             Console.WriteLine($"SignalR result : good");
         }

@@ -2,15 +2,27 @@ import ws from 'k6/ws';
 import { check } from 'k6';
 import Amqp from 'k6/x/amqp';
 import Queue from 'k6/x/amqp/queue';
-import { Gauge } from 'k6/metrics';
-import { eventMessages } from './TestData.js';
+import { Trend, Counter } from 'k6/metrics';
+import { eventMessagesSet } from './TestData.js';
 
-const myGauge = new Gauge('millisSendReceiveDiff', true);
-const testDuration = 300000;
+const latencyTrend = new Trend('latency', true);
+const sendedCallsCounter = new Counter('sended_calls');
+const receivedCallsCounter = new Counter('received_calls');
+
+const sendMessageDelayMs = 50; 
+
+const batchTimeOutMs = 10000;
+
+const delayForLatencyMs = 2000; 
+const sendingPeriodAtMs = 120000;
+const userConnectionDurationAtMs = sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
+
+
+const queueName = 'DemoQueue';
 
 export let options = {
     vus: 1,   // Number of virtual users
-    duration: `${testDuration}ms`, // Duration of the test
+    duration: `${userConnectionDurationAtMs}ms`, // Duration of the test
     cloud: {
         // Project: Default project
         projectID: 3712534,
@@ -22,7 +34,6 @@ export let options = {
 let eventMessageCounter = 0;
 let receivedMessages = {};
 let sendedMessages = {};
-const queueName = 'DemoQueue';
 
 export default function () {
     const signalRUrl = 'ws://localhost:5083/notificationHub';
@@ -40,10 +51,10 @@ export default function () {
                 if (allowPublishMessages) {
                     amqpPublish();
                 }
-            }, 500); // Publish message every 0.5 sec
-            socket.setTimeout(function () {
+            }, sendMessageDelayMs); // Publish message every X milis
+            socket.setTimeout(function() {
                 allowPublishMessages = false;
-            }, testDuration - 31000); // Stop publish messages before close connection
+            }, sendingPeriodAtMs); // Stop publish messages before close connection
         });
 
 
@@ -57,27 +68,34 @@ export default function () {
                     break;
                 default:
                     console.log(`Received message: ${msg}`);
-                    let msgWithoutSignalRProtocolEnding = msg.substring(0, msg.length - 1);
-                    let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
+                    let signalRRecordSeparator = msg.substring(msg.length - 1, msg.length);
+                    let msgsWithoutSignalRProtocolEnding = msg.split(signalRRecordSeparator);
+                    msgsWithoutSignalRProtocolEnding.pop(); // Remove end of message
 
-                    if (parsedMessage.type === 1 && parsedMessage.target === "BatchReceiveMessage") {
+                    msgsWithoutSignalRProtocolEnding.forEach((msgWithoutSignalRProtocolEnding) => {
+                        let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
 
-                        let dateNow = Date.now();
+                        if (parsedMessage.type === 1 && parsedMessage.target === "BatchReceiveMessage") {
 
-                        for (var key in parsedMessage.arguments[0]) {
-                            let receivedMessage = parsedMessage.arguments[0][key];
+                            let dateNow = Date.now();
 
-                            const millisSendReceiveDiff = dateNow - receivedMessage.timeStamp;
+                            for (var key in parsedMessage.arguments[0]) {
+                                let receivedMessage = parsedMessage.arguments[0][key];
 
-                            let receivedValues = {
-                                "IsEmpty": receivedMessage.isEmpty,
-                                "MillisSendReceiveDiff": millisSendReceiveDiff
-                            };
+                                const millisSendReceiveDiff = dateNow - receivedMessage.timeStamp;
 
-                            receivedMessages[receivedMessage.id] = receivedValues;
-                            myGauge.add(millisSendReceiveDiff);
-                        }
-                    };
+                                let receivedValues = {
+                                    "IsEmpty": receivedMessage.isEmpty,
+                                    "MillisSendReceiveDiff": millisSendReceiveDiff
+                                };
+
+                                receivedMessages[receivedMessage.id] = receivedValues;
+                                latencyTrend.add(millisSendReceiveDiff)
+                            }
+
+                            receivedCallsCounter.add(1);
+                        };
+                    });
             }
 
         });
@@ -95,9 +113,7 @@ export default function () {
         socket.setTimeout(function () {
             console.log('Closing WebSocket connection');
             socket.close();
-        }, testDuration); // Close after test durations
-
-
+        }, userConnectionDurationAtMs); // Close after test durations
     });
 
     check(res, { 'Connected successfully': (r) => r && r.status === 101 });
@@ -142,7 +158,7 @@ function getAMQPEventMessage() {
     eventMessageCounter += 1;
     console.log('Getting message');
 
-    let sendMsg = eventMessages[eventMessageCounter - 1];
+    let sendMsg = eventMessagesSet[(eventMessageCounter - 1) % 600];
     sendMsg.TimeStamp = Date.now();
 
     writeSendingMessage(sendMsg);
@@ -152,4 +168,5 @@ function getAMQPEventMessage() {
 
 function writeSendingMessage(msg) {
     sendedMessages[msg.Id] = msg.IsEmpty;
+    sendedCallsCounter.add(1);
 }

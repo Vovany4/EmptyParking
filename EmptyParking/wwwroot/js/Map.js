@@ -49,9 +49,7 @@ function connectClientNotification() {
                 });*/
 
                 connection.on("BatchReceiveMessage", function (spots) {
-                    for (var key in spots) {
-                        let spot = spots[key];
-
+                    spots.forEach((spot) => { 
                         if (!spot.isEmpty) {
                             clearMarker(spot.id);
                         } else {
@@ -61,7 +59,7 @@ function connectClientNotification() {
                         var li = document.createElement("li");
                         li.textContent = `Id: ${spot.id}, IsEmpty: ${spot.isEmpty}, Latitude: ${spot.latitude}, Longitude: ${spot.longitude}, TimeStamp: ${spot.timeStamp}`;
                         document.getElementById("msgList").appendChild(li);
-                    }
+                    });
                 });
 
             }); /*/notificationHub*/
