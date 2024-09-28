@@ -2,11 +2,27 @@ import ws from 'k6/ws';
 import { check } from 'k6';
 import Amqp from 'k6/x/amqp';
 import Queue from 'k6/x/amqp/queue';
-import { eventMessages, expectedResult } from './TestData.js';
+import { Trend, Counter } from 'k6/metrics';
+import { eventMessagesSet } from './TestData.js';
+
+const latencyTrend = new Trend('latency', true);
+const sendedCallsCounter = new Counter('sended_calls');
+const receivedCallsCounter = new Counter('received_calls');
+
+const sendMessageDelayMs = 10;
+
+const batchTimeOutMs = 0;
+
+const delayForLatencyMs = 2000;
+const sendingPeriodAtMs = 120000;
+const userConnectionDurationAtMs = sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
+
+
+const queueName = 'DemoQueue';
 
 export let options = {
     vus: 1,   // Number of virtual users
-    duration: '15s', // Duration of the test
+    duration: `${userConnectionDurationAtMs}ms`, // Duration of the test
     cloud: {
         // Project: Default project
         projectID: 3712534,
@@ -18,7 +34,6 @@ export let options = {
 let eventMessageCounter = 0;
 let receivedMessages = {};
 let sendedMessages = {};
-const queueName = 'DemoQueue';
 
 export default function () {
     const signalRUrl = 'ws://localhost:5083/notificationHub';
@@ -31,9 +46,15 @@ export default function () {
             console.log('Connected to SignalR');
             sendSignalRInitialHandshake(socket);
 
+            var allowPublishMessages = true;
             socket.setInterval(function timeout() {
-                amqpPublish();
-            }, 3000); // Publish message every 3 sec
+                if (allowPublishMessages) {
+                    amqpPublish();
+                }
+            }, sendMessageDelayMs); // Publish message every X milis
+            socket.setTimeout(function () {
+                allowPublishMessages = false;
+            }, sendingPeriodAtMs); // Stop publish messages before close connection
         });
 
 
@@ -47,35 +68,33 @@ export default function () {
                     break;
                 default:
                     console.log(`Received message: ${msg}`);
-                    let msgWithoutSignalRProtocolEnding = msg.substring(0, msg.length - 1);
-                    let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
+                    let signalRRecordSeparator = msg.substring(msg.length - 1, msg.length);
+                    let msgsWithoutSignalRProtocolEnding = msg.split(signalRRecordSeparator);
+                    msgsWithoutSignalRProtocolEnding.pop(); // Remove end of message
 
-                    if (parsedMessage.type === 1 && parsedMessage.target === "ReceiveMessage") {
+                    msgsWithoutSignalRProtocolEnding.forEach((msgWithoutSignalRProtocolEnding) => {
+                        let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
 
-                        let spotId = parsedMessage.arguments[0];
-                        let isEmpty = parsedMessage.arguments[1];
-                        let latitude = parsedMessage.arguments[2];
-                        let longitude = parsedMessage.arguments[3];
-                        let timeStamp = parsedMessage.arguments[4];
+                        if (parsedMessage.type === 1 && parsedMessage.target === "ReceiveMessage") {
 
-                        console.log('params ' + parsedMessage.arguments);
+                            let spotId = parsedMessage.arguments[0];
+                            let isEmpty = parsedMessage.arguments[1];
+                            let timeStamp = parsedMessage.arguments[4];
 
+                            const millisSendReceiveDiff = Date.now() - timeStamp;
 
-                        const millisSendReceiveDiff = Date.now() - timeStamp;
+                            let receivedValues = {
+                                "IsEmpty": isEmpty,
+                                "MillisSendReceiveDiff": millisSendReceiveDiff
+                            };
 
-                        let receivedValues = {
-                            "IsEmpty": isEmpty,
-                            "MillisSendReceiveDiff": millisSendReceiveDiff
+                            receivedMessages[spotId] = receivedValues;
+                            latencyTrend.add(millisSendReceiveDiff);
+                            receivedCallsCounter.add(1);
                         };
-
-                        receivedMessages[spotId] = receivedValues;
-                    };
+                    });
             }
 
-            // You can add more checks here to validate the messages received
-            /*check(msg, {
-                'message contains expected text': (m) => m.indexOf('expected_text') !== -1,
-            });*/
         });
 
         socket.on('close', function () {
@@ -91,12 +110,10 @@ export default function () {
         socket.setTimeout(function () {
             console.log('Closing WebSocket connection');
             socket.close();
-        }, 15000); // Close after 15 seconds
-
-
+        }, userConnectionDurationAtMs); // Close after test durations
     });
 
-    check(res, { 'status is 101 (switching protocols)': (r) => r && r.status === 101 });
+    check(res, { 'Connected successfully': (r) => r && r.status === 101 });
 
     let dynamicChecks = {};
     Object.entries(sendedMessages).forEach(([key, val]) => {
@@ -138,7 +155,7 @@ function getAMQPEventMessage() {
     eventMessageCounter += 1;
     console.log('Getting message');
 
-    let sendMsg = eventMessages[eventMessageCounter - 1];
+    let sendMsg = eventMessagesSet[(eventMessageCounter - 1) % 600];
     sendMsg.TimeStamp = Date.now();
 
     writeSendingMessage(sendMsg);
@@ -148,4 +165,5 @@ function getAMQPEventMessage() {
 
 function writeSendingMessage(msg) {
     sendedMessages[msg.Id] = msg.IsEmpty;
+    sendedCallsCounter.add(1);
 }
