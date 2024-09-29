@@ -9,19 +9,19 @@ const latencyTrend = new Trend('latency', true);
 const sendedCallsCounter = new Counter('sended_calls');
 const receivedCallsCounter = new Counter('received_calls');
 
-const sendMessageDelayMs = 10;
+const sendMessageDelayMs = 150;
 
-const batchTimeOutMs = 0;
+//const batchTimeOutMs = 0;
 
-const delayForLatencyMs = 2000;
+//const delayForLatencyMs = 2000;
 const sendingPeriodAtMs = 120000;
-const userConnectionDurationAtMs = sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
+const userConnectionDurationAtMs = 250000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
 
 
 const queueName = 'DemoQueue';
 
 export let options = {
-    vus: 1,   // Number of virtual users
+    vus: 10,   // Number of virtual users
     duration: `${userConnectionDurationAtMs}ms`, // Duration of the test
     cloud: {
         // Project: Default project
@@ -31,14 +31,17 @@ export let options = {
     }
 };
 
-let eventMessageCounter = 0;
-let receivedMessages = {};
-let sendedMessages = {};
 
 export default function () {
+    let currectVU = __VU;
+    let isFirstVU = currectVU == 1;
+    let eventMessageCounterStartPosition = isFirstVU ? 0 : currectVU*100; 
+    let eventMessageCounter = { Value: eventMessageCounterStartPosition };
+    let receivedMessages = {};
+    let sendedMessages = {};
     const signalRUrl = 'ws://localhost:5083/notificationHub';
 
-    amqpConnection();
+    //amqpConnection();
 
     const res = ws.connect(signalRUrl, function (socket) {
 
@@ -46,56 +49,61 @@ export default function () {
             console.log('Connected to SignalR');
             sendSignalRInitialHandshake(socket);
 
-            var allowPublishMessages = true;
-            socket.setInterval(function timeout() {
-                if (allowPublishMessages) {
-                    amqpPublish();
-                }
-            }, sendMessageDelayMs); // Publish message every X milis
             socket.setTimeout(function () {
-                allowPublishMessages = false;
-            }, sendingPeriodAtMs); // Stop publish messages before close connection
+                amqpConnection();
+
+                socket.setTimeout(function () {
+                    var allowPublishMessages = true;
+                    socket.setInterval(function timeout() {
+                        if (allowPublishMessages) {
+                            amqpPublish(sendedMessages, eventMessageCounter);
+                        }
+                    }, sendMessageDelayMs); // Publish message every X milis
+                    socket.setTimeout(function () {
+                        allowPublishMessages = false;
+                    }, sendingPeriodAtMs); // Stop publish messages before close connection
+
+                }, 20);
+            }, currectVU * 10);
         });
 
+        if (isFirstVU) {
+            socket.on('message', function (msg) {
+                switch (msg) {
+                    case '{}\x1e':
+                        // This is the protocol confirmation
+                        break;
+                    case '{"type":6}\x1e':
+                        // Received handshake
+                        break;
+                    default:
+                        console.log(`Received message: ${msg}`);
+                        let signalRRecordSeparator = msg.substring(msg.length - 1, msg.length);
+                        let msgsWithoutSignalRProtocolEnding = msg.split(signalRRecordSeparator);
+                        msgsWithoutSignalRProtocolEnding.pop(); // Remove end of message
 
-        socket.on('message', function (msg) {
-            switch (msg) {
-                case '{}\x1e':
-                    // This is the protocol confirmation
-                    break;
-                case '{"type":6}\x1e':
-                    // Received handshake
-                    break;
-                default:
-                    console.log(`Received message: ${msg}`);
-                    let signalRRecordSeparator = msg.substring(msg.length - 1, msg.length);
-                    let msgsWithoutSignalRProtocolEnding = msg.split(signalRRecordSeparator);
-                    msgsWithoutSignalRProtocolEnding.pop(); // Remove end of message
+                        msgsWithoutSignalRProtocolEnding.forEach((msgWithoutSignalRProtocolEnding) => {
+                            let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
 
-                    msgsWithoutSignalRProtocolEnding.forEach((msgWithoutSignalRProtocolEnding) => {
-                        let parsedMessage = JSON.parse(msgWithoutSignalRProtocolEnding);
+                            if (parsedMessage.type === 1 && parsedMessage.target === "ReceiveMessage") {
+                                let receivedMessage = parsedMessage.arguments[0];
 
-                        if (parsedMessage.type === 1 && parsedMessage.target === "ReceiveMessage") {
+                                let millisSendReceiveDiff = Date.now() - receivedMessage.timeStamp;
 
-                            let spotId = parsedMessage.arguments[0];
-                            let isEmpty = parsedMessage.arguments[1];
-                            let timeStamp = parsedMessage.arguments[4];
+                                let receivedValues = {
+                                    "IsEmpty": receivedMessage.isEmpty,
+                                    "MillisSendReceiveDiff": millisSendReceiveDiff
+                                };
 
-                            const millisSendReceiveDiff = Date.now() - timeStamp;
-
-                            let receivedValues = {
-                                "IsEmpty": isEmpty,
-                                "MillisSendReceiveDiff": millisSendReceiveDiff
+                                receivedMessages[receivedMessage.id] = receivedValues;
+                                latencyTrend.add(millisSendReceiveDiff)
+                                receivedCallsCounter.add(1);
                             };
+                        });
+                }
 
-                            receivedMessages[spotId] = receivedValues;
-                            latencyTrend.add(millisSendReceiveDiff);
-                            receivedCallsCounter.add(1);
-                        };
-                    });
-            }
-
-        });
+            });
+        }
 
         socket.on('close', function () {
             console.log('Disconnected from SignalR');
@@ -115,11 +123,13 @@ export default function () {
 
     check(res, { 'Connected successfully': (r) => r && r.status === 101 });
 
-    let dynamicChecks = {};
-    Object.entries(sendedMessages).forEach(([key, val]) => {
-        dynamicChecks[`Expected result comparison Spot[${key}]`] = (r) => r[key] && r[key].IsEmpty == val;
-    });
-    check(receivedMessages, dynamicChecks);
+    if (isFirstVU) {
+        let dynamicChecks = {};
+        Object.entries(sendedMessages).forEach(([key, val]) => {
+            dynamicChecks[`Expected result comparison Spot[${key}]`] = (r) => r[key] && r[key].IsEmpty == val;
+        });
+        check(receivedMessages, dynamicChecks);
+    }
 }
 
 function amqpConnection() {
@@ -135,10 +145,10 @@ function amqpConnection() {
     console.log(queueName + " queue is ready");
 }
 
-function amqpPublish() {
+function amqpPublish(sendedMessages, eventMessageCounter) {
     Amqp.publish({
         queue_name: queueName,
-        body: getAMQPEventMessage(),
+        body: getAMQPEventMessage(sendedMessages, eventMessageCounter),
         content_type: "text/plain"
     });
 }
@@ -151,19 +161,19 @@ function sendSignalRInitialHandshake(socket) {
     socket.send(`${handshakeMessage}\x1e`);
 }
 
-function getAMQPEventMessage() {
-    eventMessageCounter += 1;
+function getAMQPEventMessage(sendedMessages, eventMessageCounter) {
+    eventMessageCounter.Value += 1;
     console.log('Getting message');
 
-    let sendMsg = eventMessagesSet[(eventMessageCounter - 1) % 600];
+    let sendMsg = eventMessagesSet[(eventMessageCounter.Value - 1) % 600];
     sendMsg.TimeStamp = Date.now();
 
-    writeSendingMessage(sendMsg);
+    writeSendingMessage(sendMsg, sendedMessages);
 
     return JSON.stringify(sendMsg);
 }
 
-function writeSendingMessage(msg) {
+function writeSendingMessage(msg, sendedMessages) {
     sendedMessages[msg.Id] = msg.IsEmpty;
     sendedCallsCounter.add(1);
 }

@@ -11,12 +11,6 @@ function setUpMap(data) {
     let layer = new L.TileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png')
     map.addLayer(layer);
 
-    /*L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);*/
-
-
     data.forEach((item) => {
         addMarker(item.Id, item.Longitude, item.Latitude);
     });
@@ -33,16 +27,15 @@ function connectClientNotification() {
         try {
 
             await connection.start().then(() => {
-
-                connection.on("ReceiveMessage", function (spotId, isEmpty, latitude, longitude, timeStamp) {
-                    if (isEmpty) {
-                        addMarker(spotId, longitude, latitude);
+                connection.on("ReceiveMessage", function (spot) {
+                    if (spot.isEmpty) {
+                        addMarker(spot.id, spot.longitude, spot.latitude);
                     } else {
-                        clearMarker(spotId);
+                        clearMarker(spot.id);
                     }
 
                     var li = document.createElement("li");
-                    li.textContent = `SpotId: ${spotId}, IsEmpty: ${isEmpty}, Latitude: ${latitude}, Longitude: ${longitude}, TimeStamp: ${timeStamp}`;
+                    li.textContent = `Id: ${spot.id}, IsEmpty: ${spot.isEmpty}, Latitude: ${spot.latitude}, Longitude: ${spot.longitude}, TimeStamp: ${spot.timeStamp}`;
                     document.getElementById("msgList").appendChild(li);
                 });
             });
