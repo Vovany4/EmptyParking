@@ -4,13 +4,17 @@ namespace Server.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly IApplication _application;
+
         public HomeController(ILogger<HomeController> logger, IApplication application)
         {
-            application.Run();
+            _application = application;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            await _application.Run();
+
             return View();
         }
     }
