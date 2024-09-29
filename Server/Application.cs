@@ -59,29 +59,22 @@ namespace Server
                 Console.WriteLine($"{nameof(spot.IsEmpty)} : {spot.IsEmpty}");
 
                 var result = await mainService.UpdateIsEmptyParkSpotAsync(spot);
-                Console.WriteLine($"Update result : {result}");
+                if (!result) throw new Exception("Update has failed");
 
                 var databaseSpot = await mainService.GetParkSpotAsync(spot.Id) ?? throw new Exception("databaseSpot is null");
-                Console.WriteLine($"Database Spot:");
-                Console.WriteLine($"{nameof(databaseSpot.Longitude)}: {databaseSpot.Longitude}");
-                Console.WriteLine($"{nameof(databaseSpot.Latitude)}: {databaseSpot.Latitude}");
+                spot.Latitude = databaseSpot.Latitude;
+                spot.Longitude = databaseSpot.Longitude;
 
-                await hubContext.Clients.All.SendAsync(
-                    "ReceiveMessage",
-                    spot.Id,
-                    spot.IsEmpty,
-                    databaseSpot.Latitude,
-                    databaseSpot.Longitude,
-                    spot.TimeStamp);
+                await hubContext.Clients.All.SendAsync("ReceiveMessage", spot);
 
                 Console.WriteLine($"SignalR result : good");
+                channel.BasicAck(args.DeliveryTag, false);
             }
             else
             {
                 Console.WriteLine($"Spot is null");
+                channel.BasicAck(args.DeliveryTag, false);
             }
-
-            channel.BasicAck(args.DeliveryTag, false);
         }
     }
 }
