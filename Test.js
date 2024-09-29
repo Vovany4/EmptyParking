@@ -9,13 +9,13 @@ const latencyTrend = new Trend('latency', true);
 const sendedCallsCounter = new Counter('sended_calls');
 const receivedCallsCounter = new Counter('received_calls');
 
-const sendMessageDelayMs = 150;
+const sendMessageDelayMs = 50;
 
 //const batchTimeOutMs = 0;
 
 //const delayForLatencyMs = 2000;
 const sendingPeriodAtMs = 120000;
-const userConnectionDurationAtMs = 250000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
+const userConnectionDurationAtMs = 400000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
 
 
 const queueName = 'DemoQueue';
@@ -63,8 +63,8 @@ export default function () {
                         allowPublishMessages = false;
                     }, sendingPeriodAtMs); // Stop publish messages before close connection
 
-                }, 20);
-            }, currectVU * 10);
+                }, 35);
+            }, currectVU * 15);
         });
 
         if (isFirstVU) {
