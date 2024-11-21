@@ -9,13 +9,13 @@ const latencyTrend = new Trend('latency', true);
 const sendedCallsCounter = new Counter('sended_calls');
 const receivedCallsCounter = new Counter('received_calls');
 
-const sendMessageDelayMs = 10;
+const sendMessageDelayMs = 1000;
 
 //const batchTimeOutMs = 0;
 
 //const delayForLatencyMs = 2000;
-const sendingPeriodAtMs = 120000;
-const userConnectionDurationAtMs = 680000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
+const sendingPeriodAtMs = 60000;
+const userConnectionDurationAtMs = 120000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
 
 
 const queueName = 'DemoQueue';

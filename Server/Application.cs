@@ -13,11 +13,11 @@ namespace Server
         private readonly IMainService mainService;
         private readonly IHubContext<NotificationHub> hubContext;
 
-        private static List<(ulong deliveryTag, Spot message)> messageBatch = new List<(ulong, Spot)>();
+        private static Dictionary<int,(List<ulong> deliveryTags, Spot message)> messageBatch = new Dictionary<int, (List<ulong>, Spot)>();
         private static readonly object batchLock = new object();
 
         private static int batchSizeThreshold = 10;
-        private static int batchTimeIntervalMs = 5000;
+        private static int batchTimeIntervalMs = 1000;
 
         private static bool isProcessingBatch = false;
         private static bool resetTimer = false;
@@ -55,7 +55,17 @@ namespace Server
 
                 lock (batchLock)
                 {
-                    messageBatch.Add((deliveryTag, spot));
+                    if (messageBatch.ContainsKey(spot.Id)) 
+                    {
+                        var messageFromBatch = messageBatch[spot.Id];
+                        messageFromBatch.deliveryTags.Add(deliveryTag);
+
+                        messageBatch[spot.Id] = (messageFromBatch.deliveryTags, spot);
+                    }
+                    else
+                    {
+                        messageBatch[spot.Id] = (new List<ulong> { deliveryTag }, spot);
+                    }
                     Console.WriteLine($"Added message to batch: '{message}'");
 
                     if (messageBatch.Count >= batchSizeThreshold && !isProcessingBatch)
@@ -96,8 +106,14 @@ namespace Server
                     return;
                 }
 
-                messages = messageBatch.Select(tuple => tuple.Item2).ToList();
-                deliveryTags = messageBatch.Select(tuple => tuple.Item1).ToList();
+                messages = new List<Spot>();
+                deliveryTags = new List<ulong>();
+
+                foreach (var message in messageBatch)
+                {
+                    messages.Add(message.Value.Item2);
+                    deliveryTags.AddRange(message.Value.Item1);
+                }
 
                 messageBatch.Clear();
             }
