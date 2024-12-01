@@ -1,0 +1,5 @@
+docker run --rm -it -e GOOS=windows -u "$(id -u):$(id -g)" -v "${PWD}:/xk6" `
+  grafana/xk6 build v0.45.1 --output k6.exe `
+  --with github.com/mostafa/xk6-kafka@v0.17.0 `
+  --with github.com/grafana/xk6-output-influxdb@v0.3.0 `
+  --with github.com/grafana/xk6-amqp@latest
