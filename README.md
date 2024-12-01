@@ -16,6 +16,11 @@ Main idea is to find a free slots to park in
                        User: postgis<br />
                        Password: 1111<br />
 4. Run script on MASTER database -> "Create_parkspots_table_with_data.txt" (plik is at repo)
+5. Configure start up project:<br />
+   Select -> "Multiple start up projects"<br />
+   Set first project as "Server"<br />
+   Second as "EmptyParking"<br />
+   *Don't forget to move started projects at order with arrows
 
 ### Testing
 1. Install K6 -> run script from file at powerShell"K6 configuration for powerShell.txt"(plik is at repo)

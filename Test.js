@@ -9,19 +9,19 @@ const latencyTrend = new Trend('latency', true);
 const sendedCallsCounter = new Counter('sended_calls');
 const receivedCallsCounter = new Counter('received_calls');
 
-const sendMessageDelayMs = 10;
+const sendMessageDelayMs = 500;
 
 //const batchTimeOutMs = 0;
 
 //const delayForLatencyMs = 2000;
-const sendingPeriodAtMs = 120000;
-const userConnectionDurationAtMs = 680000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
+const sendingPeriodAtMs = 60000;
+const userConnectionDurationAtMs = 80000; //sendingPeriodAtMs + batchTimeOutMs + delayForLatencyMs;
 
 
 const queueName = 'DemoQueue';
 
 export let options = {
-    vus: 10,   // Number of virtual users
+    vus: 3,   // Number of virtual users
     duration: `${userConnectionDurationAtMs}ms`, // Duration of the test
     cloud: {
         // Project: Default project
